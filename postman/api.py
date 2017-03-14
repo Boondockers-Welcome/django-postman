@@ -82,3 +82,4 @@ def pm_write(sender, recipient, subject, body='', skip_notification=False,
     message.save()
     if not skip_notification:
         message.notify_users(initial_status, _get_site())
+    return message.pk
