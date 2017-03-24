@@ -5,6 +5,7 @@ except ImportError:
     from django.utils.importlib import import_module  # Django 1.6 / py2.6
 import re
 import sys
+import string
 from textwrap import TextWrapper
 
 from django import VERSION
@@ -139,3 +140,33 @@ def notify_user(object, action, site):
     else:
         if not DISABLE_USER_EMAILING and user.email and user.is_active:
             email('postman/email_user_subject.txt', 'postman/email_user', [user.email], object, action, site)
+
+
+class PartialFormatter(string.Formatter):
+    def __init__(self, missing='~~', bad_fmt='!!'):
+        self.missing, self.bad_fmt = missing, bad_fmt
+
+    def get_field(self, field_name, args, kwargs):
+        # Handle a key not found
+        try:
+            val = super(PartialFormatter, self).get_field(field_name, args, kwargs)
+            # Python 3, 'super().get_field(field_name, args, kwargs)' works
+        except (KeyError, AttributeError):
+            val = None, field_name
+        return val
+
+    def format_field(self, value, spec):
+        # handle an invalid format
+        if value is None:
+            return super(PartialFormatter, self).format_field(self.missing, spec)
+        try:
+            return super(PartialFormatter, self).format_field(value, spec)
+        except ValueError:
+            if self.bad_fmt is not None:
+                return super(PartialFormatter, self).format_field(self.bad_fmt, spec)
+            else:
+                raise
+
+
+fmt = PartialFormatter()
+

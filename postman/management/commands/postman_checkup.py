@@ -1,14 +1,20 @@
 from __future__ import unicode_literals
 import datetime
 
-from django.core.management.base import NoArgsCommand
+try:
+    from django.core.management.base import NoArgsCommand
+except ImportError:
+    from django.core.management import BaseCommand as NoArgsCommand
 from django.db.models import Q, F, Count
 
 from postman.models import Message
-
+from postman.utils import fmt
 
 class Command(NoArgsCommand):
     help = "Can be run as a cron job or directly to check-up data consistency in the database."
+
+    def handle(self, **options):
+        return self.handle_noargs(**options)
 
     def handle_noargs(self, **options):
         verbose = int(options.get('verbosity'))
@@ -53,6 +59,6 @@ class Command(NoArgsCommand):
         self.stderr.write("  {0:6} {1:5} {2:5} {3:10} {4:6} {5:6} {6:16} {7:16} {8:16}\n".format(
             "Id","From","To","Email","Parent","Thread","Sent","Read","Replied"))
         for msg in msgs:
-            self.stderr.write(
+            self.stderr.write(fmt.format(
                 "  {0.pk:6} {0.sender_id:5} {0.recipient_id:5} {0.email:10.10} {0.parent_id:6} {0.thread_id:6}"
-                " {0.sent_at!s:16.16} {0.read_at!s:16.16} {0.replied_at!s:16.16}\n".format(msg))
+                " {0.sent_at!s:16.16} {0.read_at!s:16.16} {0.replied_at!s:16.16}\n", msg))

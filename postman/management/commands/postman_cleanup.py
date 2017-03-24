@@ -2,22 +2,39 @@ from __future__ import unicode_literals
 from datetime import timedelta
 from optparse import make_option
 
-from django.core.management.base import NoArgsCommand
+from django.core.management.base import BaseCommand
 from django.db.models import Max, Count, F, Q
 from django.utils.timezone import now
+import django
 
 from postman.models import Message
 
+DEFAULT_DAYS = 30
 
-class Command(NoArgsCommand):
+
+class Command(BaseCommand):
     help = """Can be run as a cron job or directly to clean out old data from the database:
   Messages or conversations marked as deleted by both sender and recipient,
   more than a minimal number of days ago."""
-    option_list = NoArgsCommand.option_list + (
-        make_option('-d', '--days', type='int', default=30,
-            help='The minimal number of days a message is kept marked as deleted, '
-                 'before to be considered for real deletion [default: %default]'),
+
+    if django.VERSION < (1, 8):
+        option_list = BaseCommand.option_list + (
+            make_option(
+                '-d', '--days', type='int', default=DEFAULT_DAYS,
+                help='The minimal number of days a message is kept marked as deleted, '
+                'before to be considered for real deletion [default: %s]' % DEFAULT_DAYS
+            ),
         )
+
+    def add_arguments(self, parser):
+        parser.add_argument(
+            '-d', '--days', type=int, default=DEFAULT_DAYS,
+            help='The minimal number of days a message is kept marked as deleted, '
+            'before to be considered for real deletion [default: %s]' % DEFAULT_DAYS
+        )
+
+    def handle(self, **options):
+        return self.handle_noargs(**options)
 
     def handle_noargs(self, **options):
         verbose = int(options.get('verbosity'))
