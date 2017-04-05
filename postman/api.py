@@ -54,7 +54,8 @@ def pm_broadcast(sender, recipients, subject, body='', skip_notification=False):
 
 
 def pm_write(sender, recipient, subject, body='', skip_notification=False,
-        auto_archive=False, auto_delete=False, auto_moderators=None):
+        auto_archive=False, auto_delete=False, auto_moderators=None,
+        thread=None):
     """
     Write a message to a User.
     Contrary to pm_broadcast(), the message is archived and/or deleted on
@@ -79,6 +80,12 @@ def pm_write(sender, recipient, subject, body='', skip_notification=False,
         message.sender_archived = True
     if auto_delete:
         message.sender_deleted_at = now()
+    if thread:
+        message.thread = thread
+        if not thread.thread_id:  # at the very first reply, make it a conversation
+            thread.thread = thread
+            thread.save()
+        message.parent = Message.objects.filter(pk=thread.id).last()
     message.save()
     if not skip_notification:
         message.notify_users(initial_status, _get_site())
