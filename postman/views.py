@@ -296,12 +296,18 @@ class ReplyView(ComposeMixin, FormView):
                 post = kwargs['data'].copy()  # self.request.POST is immutable
                 post['subject'] = self.initial['subject']
                 kwargs['data'] = post
-            kwargs['recipient'] = self.parent.sender or self.parent.email
+            if self.parent.sender != self.request.user:
+                kwargs['recipient'] = self.parent.sender or self.parent.email
+            else:
+                kwargs['recipient'] = self.parent.recipient or self.parent.email
         return kwargs
 
     def get_context_data(self, **kwargs):
         context = super(ReplyView, self).get_context_data(**kwargs)
-        context['recipient'] = self.parent.obfuscated_sender
+        if self.parent.sender != self.request.user:
+            context['recipient'] = self.parent.obfuscated_sender
+        else:
+            context['recipient'] = self.parent.obfuscated_recipient
         return context
 
 
@@ -355,8 +361,8 @@ class DisplayMixin(NamespaceMixin, object):
         context.update({
             'pm_messages': self.msgs,
             'archived': archived,
-            'reply_to_pk': received.pk if received else None,
-            'form': self.form_class(initial=received.quote(*self.formatters)) if received else None,
+            'reply_to_pk': received.pk if received else self.msgs.last().pk,
+            'form': self.form_class(initial=received.quote(*self.formatters)) if received else self.form_class(),
             'next_url': self.request.GET.get('next') or reverse('postman:inbox', current_app=self.request.resolver_match.namespace),
         })
         return context
