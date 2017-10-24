@@ -16,6 +16,8 @@ from django.utils.encoding import force_text
 from django.utils.html import strip_tags
 from django.utils.translation import ugettext, ugettext_lazy as _
 
+from .signals import msg_accepted_notification_sending
+
 # make use of a favourite notifier app such as django-notification
 # but if not installed or not desired, fallback will be to do basic emailing
 name = getattr(settings, 'POSTMAN_NOTIFIER_APP', 'notification')
@@ -132,6 +134,7 @@ def notify_user(object, action, site):
         user = object.recipient
         parent = object.parent
         label = 'postman_reply' if (parent and parent.sender_id == object.recipient_id) else 'postman_message'
+        msg_accepted_notification_sending.send(sender=object.__class__, message=object)
     else:
         return
     if notification:

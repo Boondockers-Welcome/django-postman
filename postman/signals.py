@@ -1,3 +1,4 @@
+import django.dispatch
 from django.utils.translation import ugettext_noop as _
 from django.conf import settings
 try:
@@ -14,3 +15,6 @@ def create_notice_types(*args, **kwargs):
         create("postman_rejection", _("Message Rejected"), _("Your message has been rejected"))
         create("postman_message", _("Message Received"), _("You have received a message"))
         create("postman_reply", _("Reply Received"), _("You have received a reply"))
+
+
+msg_accepted_notification_sending = django.dispatch.Signal(providing_args=["message"])
