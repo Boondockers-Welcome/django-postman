@@ -332,7 +332,10 @@ class DisplayMixin(NamespaceMixin, object):
 
     def get(self, request, *args, **kwargs):
         user = request.user
-        self.msgs = Message.objects.thread(user, self.filter)
+        if request.user.is_staff:
+            self.msgs = Message.objects.staff_thread(self.filter)
+        else:
+            self.msgs = Message.objects.thread(user, self.filter)
         if not self.msgs:
             raise Http404
         for m in self.msgs:

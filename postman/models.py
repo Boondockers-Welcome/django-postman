@@ -224,6 +224,12 @@ class MessageManager(models.Manager):
             (models.Q(recipient=user) & models.Q(moderation_status=STATUS_ACCEPTED)) | models.Q(sender=user),
         ).order_by('sent_at')
 
+    def staff_thread(self, filter):
+        """
+        Same as thread, but return all messages regardless of sender/recipient
+        """
+        return self.select_related('sender', 'recipient').filter(filter).order_by('sent_at')
+
     def as_recipient(self, user, filter):
         """
         Return messages matching a filter AND being visible to a user as the recipient.
