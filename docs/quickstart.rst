@@ -6,29 +6,28 @@ Quick start guide
 Requisites and dependances
 --------------------------
 
-Python version >= 2.6 or >= 3.3
+Python version >= 2.7 or >= 3.3
 
 Some reasons:
 
+* (2.7) minimum required by Django 1.8
 * (2.6) use of ``str.format()``
 
-Django version >= 1.5 on py2, >= 1.5.5 on py3
+Django version >= 1.8
 
 Some reasons:
 
-* (1.5/py2) ``url`` template tag syntax
-* (1.5.5/py3) Six version >= 1.4.0
-* (1.4.2) use of the Six library for supporting Python 2 and 3 in a single codebase
+* (1.8) for ``django.db.models.Value``
 
 Installation
 ------------
-Get the code from the repository, which is hosted at `Bitbucket <http://bitbucket.org/>`_.
+Get the code from the repository, which is hosted at `Bitbucket <https://bitbucket.org/>`_.
 
 You have two main ways to obtain the latest code and documentation:
 
 With the version control software Mercurial installed, get a local copy by typing::
 
-    hg clone http://bitbucket.org/psam/django-postman/
+    hg clone https://bitbucket.org/psam/django-postman/
 
 Or download a copy of the package, which is available in several compressed formats,
 either from the ``Download`` tab or from the ``get source`` menu option.
@@ -85,9 +84,96 @@ You may specify some additional configuration options in your :file:`settings.py
 ``POSTMAN_DISABLE_USER_EMAILING``
     Set it to True if you do not want basic email notification to users.
     This setting does not apply to visitors (refer to ``POSTMAN_DISALLOW_ANONYMOUS``),
-    nor to a notifier application (refer to ``POSTMAN_NOTIFIER_APP``)
+    nor to a notifier application (refer to ``POSTMAN_NOTIFIER_APP``).
 
     *Defaults to*: False.
+
+``POSTMAN_NOTIFICATION_APPROVAL``
+    *New in version 3.7.0.*
+
+    A hook to control the email notification sending on a per user basis. It can act both as a go/no-go
+    and as a provider of an alternative email address.
+    For instance, it could be used to condition the notification to a profile preference of the user
+    or to implement a custom processing to deduce the final email address.
+    This setting does not apply to visitors (refer to ``POSTMAN_DISALLOW_ANONYMOUS``),
+    nor to a notifier application (refer to ``POSTMAN_NOTIFIER_APP``).
+    The value can be specified as:
+
+    * ``True`` to allow the sending in any case.
+    * A function, with these parameters: user, action, site.
+    * The full path to a function, as a string, whose import will be deferred. For example: 'myapp.mymodule.myfunc'.
+      This sort of reference can be useful when resolving circular import dependencies between applications or modules.
+      The parameters of the function are: user, action, site.
+    * The name of a method of a custom user model. The method is called on the user instance with these parameters: action, site.
+    * (not recommended) Any other value that can be evaluated as a boolean and, if True, as a string.
+
+    *Defaults to*: True.
+
+    Parameters are:
+
+    * user: an instance of ``settings.AUTH_USER_MODEL``.
+    * action, site: refer to the context variables described in section :ref:`for_visitors`.
+
+    When a function or method is used, the returned value may be:
+
+    * ``False`` (or ``None``) to prevent the sending.
+    * ``True`` to allow the sending, to the ordinary email address of the user.
+    * a string as the email address to use instead of the ordinary one.
+
+    Examples::
+
+        # settings.py ; one of:
+        POSTMAN_NOTIFICATION_APPROVAL = False
+        POSTMAN_NOTIFICATION_APPROVAL = lambda user, action, site: return !user.is_staff
+        POSTMAN_NOTIFICATION_APPROVAL = 'myapp.mymodule.notification_approval'
+        AUTH_USER_MODEL = 'myapp.MyUser'
+        POSTMAN_NOTIFICATION_APPROVAL = 'notification_approval'
+
+        # myapp/mymodule.py
+        def notification_approval(user, action, site):
+            return '{}@domain.tld'.format(user.username)
+
+        # myapp/models.py
+        class MyUser(AbstractBaseUser):
+            #...
+            def notification_approval(self, action, site):
+                return True if self.is_active else 'support@mydom.com'
+
+    Note: The ``POSTMAN_DISABLE_USER_EMAILING`` setting is kept for backward compatibility, but the same effect can be obtained
+    with ``POSTMAN_NOTIFICATION_APPROVAL = False``.
+
+``POSTMAN_FROM_EMAIL``
+    *New in version 3.6.0.*
+
+    Set it if you want to override the default 'from' field value.
+
+    *Defaults to*: DEFAULT_FROM_EMAIL.
+
+``POSTMAN_PARAMS_EMAIL``
+    *New in version 3.6.0.*
+
+    You can customize the sending of emails by this means.
+    The value is a function, receiving one parameter: a dictionary with the same context variables
+    as for the subject and body template rendering: {'site': ..., 'object': ..., 'action': ...}.
+    The return must be a dictionary, possibly empty, with django.core.mail.EmailMessage parameters as keys.
+
+    *Defaults to*: None.
+
+    Example::
+
+        def get_params_email(context):
+            return {
+                'reply_to': ['someone@domain.tld'],
+                'headers': {'X-my-choice': 'my-value'}
+            } if context['action'] == 'acceptance' else {}
+        POSTMAN_PARAMS_EMAIL = get_params_email  # default is None
+
+    Notes:
+
+    * 'reply_to' is available as of Django 1.8. For previous versions, you can embed it under 'headers' as:
+      ``{'Reply-To': 'someone@domain.tld'}``
+    * In case of use of django-mailer (v1.2.2), only 'headers' is supported and
+      to the condition that a HTML-version email template is involved.
 
 ``POSTMAN_AUTO_MODERATE_AS``
     The default moderation status when no auto-moderation functions, if any, were decisive.
@@ -166,13 +252,13 @@ You may specify some additional configuration options in your :file:`settings.py
 
     * 'name'
         The name of the auto-completer application.
-        Defaults to 'ajax_select'
+        Defaults to 'ajax_select'.
     * 'field'
         The model class name.
-        Defaults to 'AutoCompleteField'
+        Defaults to 'AutoCompleteField'.
     * 'arg_name'
-        The name of the argument
-        Defaults to 'channel'
+        The name of the argument.
+        Defaults to 'channel'.
     * 'arg_default'
         No default value. This is a mandatory default value, but you may supersede it in the field
         definition of a custom form or pass it in the url pattern definitions.
@@ -185,8 +271,11 @@ A complete set of working templates is provided with the application.
 You may use it as it is with a CSS design of yours, re-use it or extend some parts of it,
 or only view it as an example.
 
+Don't forget that you shouldn't modify the templates provided into the package
+(changes are lost with an application update) but use a copied set pointed to by the ``DIRS`` entry in TEMPLATES setting.
+
 You may need to adjust some templates to match your version of Django.
-Permute the comment tags for the lines denoted by the marks: {# dj v1.x #} in:
+Permute the comment tags for the lines denoted by the marks: ``{# dj v1.x #}`` in:
 
 * (currently no case)
 
@@ -217,7 +306,7 @@ Static Files
 ~~~~~~~~~~~~
 
 A CSS file is provided with the application, for the Admin site: :file:`postman/css/admin.css`.
-It is not obligatory but makes the display more confortable.
+It is not mandatory but makes the display more comfortable.
 
 A basic CSS file is provided to style the views: :file:`postman/css/postman.css`.
 You may use it as a starting point to make your own design.
@@ -234,7 +323,7 @@ Examples
 :file:`settings.py`::
 
     INSTALLED_APPS = (
-        # 'pagination'  # has to be before postman
+        # 'dj_pagination'  # has to be before postman
         # ...
         'postman',
         # ...
@@ -247,9 +336,11 @@ Examples
     # POSTMAN_DISALLOW_MULTIRECIPIENTS = True  # default is False
     # POSTMAN_DISALLOW_COPIES_ON_REPLY = True  # default is False
     # POSTMAN_DISABLE_USER_EMAILING = True  # default is False
+    # POSTMAN_FROM_EMAIL = 'from@host.tld'  # default is DEFAULT_FROM_EMAIL
+    # POSTMAN_PARAMS_EMAIL = get_params_email  # default is None
     # POSTMAN_AUTO_MODERATE_AS = True  # default is None
     # POSTMAN_SHOW_USER_AS = 'get_full_name'  # default is None
-	# POSTMAN_NAME_USER_AS = 'last_name'  # default is None
+    # POSTMAN_NAME_USER_AS = 'last_name'  # default is None
     # POSTMAN_QUICKREPLY_QUOTE_BODY = True  # default is False
     # POSTMAN_NOTIFIER_APP = None  # default is 'notification'
     # POSTMAN_MAILER_APP = None  # default is 'mailer'
@@ -262,4 +353,4 @@ Examples
 
 :file:`urls.py`::
 
-    (r'^messages/', include('postman.urls', namespace='postman', app_name='postman')),
+    path('messages/', include('postman.urls', namespace='postman')),

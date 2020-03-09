@@ -43,13 +43,11 @@ in order to keep the features available to anonymous users to a strict minimum.
 
 Example::
 
-    urlpatterns = patterns('postman.views',
+    urlpatterns = [
         # ...
-        url(r'^write/(?:(?P<recipients>[^/#]+)/)?$',
-            WriteView.as_view(max=3),
-            name='write'),
+        re_path(r'… ✂ …', WriteView.as_view(max=3), name='write'),
         # ...
-    )
+    ]
 
 Advanced usage
 ~~~~~~~~~~~~~~
@@ -91,13 +89,12 @@ Example::
             return "is away"
         return None
 
-    urlpatterns = patterns('postman.views',
+    urlpatterns = [
         # ...
-        url(r'^write/(?:(?P<recipients>[^/#]+)/)?$',
-            WriteView.as_view(user_filter=my_user_filter),
-            name='write'),
+        re_path(r'… ✂ …',
+            WriteView.as_view(user_filter=my_user_filter), name='write'),
         # ...
-    )
+    ]
 
 The filter will be called for each recipient, for validation.
 
@@ -150,13 +147,13 @@ An example, with the django-relationships application::
             return "has blacklisted you"
         return None
 
-    urlpatterns = patterns('postman.views',
+    urlpatterns = [
         # ...
-        url(r'^write/(?:(?P<recipients>[^/#]+)/)?$',
+        re_path(r'… ✂ …',
             WriteView.as_view(exchange_filter=my_exchange_filter),
             name='write'),
         # ...
-    )
+    ]
 
 The filter will be called for each couple, to validate that the exchange is possible.
 
@@ -273,26 +270,26 @@ The value is the channel name.
 
 Example::
 
-    urlpatterns = patterns('postman.views',
+    urlpatterns = [
         # ...
-        url(r'^write/(?:(?P<recipients>[^/#]+)/)?$',
+        re_path(r'… ✂ …',
             WriteView.as_view(autocomplete_channels=(None,'anonymous_ac')),
             name='write'),
-        url(r'^reply/(?P<message_id>[\d]+)/$',
+        re_path(r'… ✂ …',
             ReplyView.as_view(autocomplete_channel='reply_ac'),
             name='reply'),
         # ...
-    )
+    ]
 
 Example::
 
-    urlpatterns = patterns('postman.views',
+    urlpatterns = [
         # ...
-        url(r'^write/(?:(?P<recipients>[^/#]+)/)?$',
-            WriteView.as_view(autocomplete_channels='write_ac'), 
+        re_path(r'… ✂ …',
+            WriteView.as_view(autocomplete_channels='write_ac'),
             name='write'),
         # ...
-    )
+    ]
 
 Advanced usage
 ~~~~~~~~~~~~~~

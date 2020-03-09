@@ -28,6 +28,8 @@ so it may be useful to involve some auto moderators in the processing.
 Arguments: (sender, recipient, subject, body='', skip_notification=False,
 auto_archive=False, auto_delete=False, auto_moderators=[])
 
+Return: The created Message instance.
+
 Arguments
 ---------
 * ``auto_archive``: to mark the message as archived on the sender side

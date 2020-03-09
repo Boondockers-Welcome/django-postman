@@ -34,16 +34,15 @@ Example::
         return None
     mod2.default_reason = 'mod2 default reason'
 
-    urlpatterns = patterns('postman.views',
+    urlpatterns = [
         # ...
-        url(r'^write/(?:(?P<recipients>[^/#]+)/)?$',
+        re_path(r'… ✂ …',
             WriteView.as_view(auto_moderators=(mod1, mod2)),
             name='write'),
-        url(r'^reply/(?P<message_id>[\d]+)/$',
-            ReplyView.as_view(auto_moderators=mod1),
-            name='reply'),
+        re_path(r'… ✂ …',
+            ReplyView.as_view(auto_moderators=mod1), name='reply'),
         # ...
-    )
+    ]
 
 Each auto-moderator function will be called for the message to moderate,
 in the same order as the one set in the parameter.

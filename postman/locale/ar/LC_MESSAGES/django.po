@@ -9,13 +9,14 @@
 # Moemen Abd ElKader <mmaxtoo@gmail.com>, 2015
 # Qasim Albaqali <qasim@ondernemer.io>, 2016
 # LeLouch Lamperouge <20shizuo@gmail.com>, 2016
+# Ramez Ashraf <ramezashraf@gmail.com>, 2017
 msgid ""
 msgstr ""
 "Project-Id-Version: django-postman\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2016-11-01 11:05+0100\n"
-"PO-Revision-Date: 2016-12-12 19:31+0000\n"
-"Last-Translator: LeLouch Lamperouge <20shizuo@gmail.com>\n"
+"PO-Revision-Date: 2017-11-01 19:57+0000\n"
+"Last-Translator: Ramez Ashraf <ramezashraf@gmail.com>\n"
 "Language-Team: Arabic (http://www.transifex.com/psam/django-postman/language/ar/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -185,7 +186,7 @@ msgstr "موضوع"
 
 #: .\models.py:262
 msgid "body"
-msgstr ""
+msgstr "متن"
 
 #: .\models.py:263 .\models.py:346
 msgid "sender"
@@ -213,15 +214,15 @@ msgstr "أرسلت في"
 
 #: .\models.py:269
 msgid "read at"
-msgstr ""
+msgstr "قرئت في"
 
 #: .\models.py:270
 msgid "replied at"
-msgstr ""
+msgstr "تم الرد في"
 
 #: .\models.py:271
 msgid "archived by sender"
-msgstr ""
+msgstr "تمت ارشفتها من المرسل"
 
 #: .\models.py:272
 msgid "archived by recipient"
@@ -317,7 +318,7 @@ msgstr "أكتب"
 
 #: .\templates\postman\base.html:12
 msgid "Archives"
-msgstr ""
+msgstr "الأرشيف"
 
 #: .\templates\postman\base.html:13
 msgid "Trash"
@@ -329,11 +330,11 @@ msgstr ""
 
 #: .\templates\postman\base_folder.html:19
 msgid "by conversation"
-msgstr ""
+msgstr "بالمحادثه"
 
 #: .\templates\postman\base_folder.html:20
 msgid "by message"
-msgstr ""
+msgstr "بالرساله"
 
 #: .\templates\postman\base_folder.html:24 .\templates\postman\view.html:22
 msgid "Delete"
@@ -341,11 +342,11 @@ msgstr "حذف"
 
 #: .\templates\postman\base_folder.html:25 .\templates\postman\view.html:23
 msgid "Archive"
-msgstr ""
+msgstr "الأرشيف"
 
 #: .\templates\postman\base_folder.html:26
 msgid "Undelete"
-msgstr ""
+msgstr "الرجوع عن الحذف"
 
 #: .\templates\postman\base_folder.html:27
 msgid "Mark as read"
@@ -357,7 +358,7 @@ msgstr ""
 
 #: .\templates\postman\base_folder.html:33
 msgid "Action"
-msgstr ""
+msgstr "الفعل"
 
 #: .\templates\postman\base_folder.html:34
 msgid "Sender"
@@ -373,7 +374,7 @@ msgstr "التاريخ"
 
 #: .\templates\postman\base_folder.html:52
 msgid "g:i A,M j,n/j/y"
-msgstr ""
+msgstr "g:i A,M j,n/j/y"
 
 #: .\templates\postman\base_folder.html:59
 msgid "No messages."
@@ -464,20 +465,20 @@ msgstr ""
 
 #: .\templates\postman\inbox.html:3
 msgid "Received Messages"
-msgstr ""
+msgstr "الرسائل المستلمه"
 
 #: .\templates\postman\inbox.html:6
 msgid "Received"
-msgstr ""
+msgstr "استلمت"
 
 #: .\templates\postman\reply.html:3 .\templates\postman\view.html:25
 #: .\templates\postman\view.html:28 .\templates\postman\view.html:31
 msgid "Reply"
-msgstr ""
+msgstr "رد"
 
 #: .\templates\postman\sent.html:8
 msgid "Sent"
-msgstr ""
+msgstr "أرسلت"
 
 #: .\templates\postman\trash.html:3
 msgid "Deleted Messages"
@@ -491,7 +492,7 @@ msgstr ""
 
 #: .\templates\postman\view.html:5
 msgid "Conversation"
-msgstr ""
+msgstr "المحادثه"
 
 #: .\templates\postman\view.html:13
 msgid ":"
@@ -499,7 +500,7 @@ msgstr ": "
 
 #: .\templates\postman\view.html:20
 msgid "Back"
-msgstr ""
+msgstr "رجوع"
 
 #: .\templatetags\postman_tags.py:47
 msgid "<me>"

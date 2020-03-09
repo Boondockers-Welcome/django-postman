@@ -4,7 +4,7 @@ A messaging application for Django
 from __future__ import unicode_literals
 
 # following PEP 386: N.N[.N]+[{a|b|c|rc}N[.N]+][.postN][.devN]
-VERSION = (3, 5, 1)
+VERSION = (3, 6, 2)
 PREREL = ()
 POST = 1
 DEV = 0

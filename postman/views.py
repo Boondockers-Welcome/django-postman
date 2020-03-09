@@ -5,24 +5,23 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import get_user_model
-try:
-    from django.contrib.sites.shortcuts import get_current_site  # Django 1.7
-except ImportError:
-    from django.contrib.sites.models import get_current_site
-from django.core.urlresolvers import reverse
+from django.contrib.sites.shortcuts import get_current_site
+if VERSION < (1, 10):
+    from django.core.urlresolvers import reverse
+else:
+    from django.urls import reverse
 from django.db.models import Q
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect
 from django.utils.decorators import method_decorator
 from django.utils.encoding import force_text
-try:
-    from django.utils.six.moves.urllib.parse import urlsplit, urlunsplit  # Django 1.4.11, 1.5.5
-except ImportError:
-    from urlparse import urlsplit, urlunsplit
+from django.utils.six.moves.urllib.parse import urlsplit, urlunsplit  # Django 1.4.11, 1.5.5
 from django.utils.timezone import now
 from django.utils.translation import ugettext as _, ugettext_lazy
+from django.views.decorators.cache import never_cache
 from django.views.decorators.csrf import csrf_protect
-from django.views.generic import FormView, TemplateView, View
+from django.views.decorators.debug import sensitive_post_parameters
+from django.views.generic import FormView, RedirectView, TemplateView, View
 
 from .fields import autocompleter_app
 from .forms import WriteForm, AnonymousWriteForm, QuickReplyForm, FullReplyForm
@@ -31,6 +30,8 @@ from .utils import format_subject, format_body
 
 login_required_m = method_decorator(login_required)
 csrf_protect_m = method_decorator(csrf_protect)
+never_cache_m = method_decorator(never_cache)
+sensitive_post_parameters_m = method_decorator(sensitive_post_parameters('subject', 'body'))
 
 
 ##########
@@ -43,17 +44,36 @@ def _get_referer(request):
         return urlunsplit(('', '', sr.path, sr.query, sr.fragment))
 
 
+def _get_safe_internal_url(urlstring):
+    """Return the URL without the scheme part and the domain part, if present."""
+    if urlstring:
+        sr = urlsplit(urlstring)
+        return urlunsplit(('', '', sr.path, sr.query, sr.fragment))
+
+
 ########
 # Views
 ########
+class IndexView(RedirectView):
+    """
+    Redirect to the inbox folder view, taking care to stay sticked to the targeted application instance
+    when there is more than one instance.
+
+    """
+    pattern_name = 'postman:inbox'
+    permanent = True
+
+    def get_redirect_url(self, *args, **kwargs):
+        return reverse(self.pattern_name,
+            args=args, kwargs=kwargs,
+            current_app=self.request.resolver_match.namespace)
+
+
 class NamespaceMixin(object):
     """Common code to manage the namespace."""
 
     def render_to_response(self, context, **response_kwargs):
-        if VERSION >= (1, 8):
-            self.request.current_app = self.request.resolver_match.namespace
-        else:
-            response_kwargs['current_app'] = self.request.resolver_match.namespace
+        self.request.current_app = self.request.resolver_match.namespace
         return super(NamespaceMixin, self).render_to_response(context, **response_kwargs)
 
 
@@ -61,6 +81,7 @@ class FolderMixin(NamespaceMixin, object):
     """Code common to the folders."""
     http_method_names = ['get']
 
+    @never_cache_m
     @login_required_m
     def dispatch(self, *args, **kwargs):
         return super(FolderMixin, self).dispatch(*args, **kwargs)
@@ -182,7 +203,7 @@ class ComposeMixin(NamespaceMixin, object):
         return kwargs
 
     def get_success_url(self):
-        return self.request.GET.get('next') or self.success_url or _get_referer(self.request) or 'postman:inbox'
+        return _get_safe_internal_url(self.request.GET.get('next')) or self.success_url or _get_referer(self.request) or 'postman:inbox'
 
     def form_valid(self, form):
         params = {'auto_moderators': self.auto_moderators}
@@ -221,6 +242,8 @@ class WriteView(ComposeMixin, FormView):
     autocomplete_channels = None
     template_name = 'postman/write.html'
 
+    @sensitive_post_parameters_m
+    @never_cache_m
     @csrf_protect_m
     def dispatch(self, *args, **kwargs):
         if getattr(settings, 'POSTMAN_DISALLOW_ANONYMOUS', False):
@@ -228,7 +251,8 @@ class WriteView(ComposeMixin, FormView):
         return super(WriteView, self).dispatch(*args, **kwargs)
 
     def get_form_class(self):
-        return self.form_classes[0] if self.request.user.is_authenticated() else self.form_classes[1]
+        is_authenticated = self.request.user.is_authenticated if VERSION >= (1, 10) else self.request.user.is_authenticated()
+        return self.form_classes[0 if is_authenticated else 1]
 
     def get_initial(self):
         initial = super(WriteView, self).get_initial()
@@ -251,7 +275,8 @@ class WriteView(ComposeMixin, FormView):
     def get_form_kwargs(self):
         kwargs = super(WriteView, self).get_form_kwargs()
         if isinstance(self.autocomplete_channels, tuple) and len(self.autocomplete_channels) == 2:
-            channel = self.autocomplete_channels[self.request.user.is_anonymous()]
+            is_anonymous = self.request.user.is_anonymous if VERSION >= (1, 10) else self.request.user.is_anonymous()
+            channel = self.autocomplete_channels[1 if is_anonymous else 0]
         else:
             channel = self.autocomplete_channels
         kwargs['channel'] = channel
@@ -275,6 +300,8 @@ class ReplyView(ComposeMixin, FormView):
     autocomplete_channel = None
     template_name = 'postman/reply.html'
 
+    @sensitive_post_parameters_m
+    @never_cache_m
     @csrf_protect_m
     @login_required_m
     def dispatch(self, request, message_id, *args, **kwargs):
@@ -326,6 +353,7 @@ class DisplayMixin(NamespaceMixin, object):
     formatters = (format_subject, format_body if getattr(settings, 'POSTMAN_QUICKREPLY_QUOTE_BODY', False) else None)
     template_name = 'postman/view.html'
 
+    @never_cache_m
     @login_required_m
     def dispatch(self, *args, **kwargs):
         return super(DisplayMixin, self).dispatch(*args, **kwargs)
@@ -417,7 +445,7 @@ class UpdateMessageMixin(object):
             filter = Q(pk__in=pks) | Q(thread__in=tpks)
             self._action(user, filter)
             messages.success(request, self.success_msg, fail_silently=True)
-            return redirect(request.GET.get('next') or self.success_url or next_url)
+            return redirect(_get_safe_internal_url(request.GET.get('next')) or self.success_url or next_url)
         else:
             messages.warning(request, _("Select at least one object."), fail_silently=True)
             return redirect(next_url)

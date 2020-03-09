@@ -1,27 +1,35 @@
 from __future__ import unicode_literals
-import hashlib
-try:
-    from importlib import import_module
-except ImportError:
-    from django.utils.importlib import import_module  # Django 1.6 / py2.6
 
+import hashlib
+from importlib import import_module
+
+from django import VERSION
 from django.conf import settings
 from django.core.exceptions import ValidationError
-from django.core.urlresolvers import reverse
 from django.db import models
+from django.db.models import IntegerField, Value
+from django.db.models.expressions import RawSQL
 from django.db.models.query import QuerySet
 from django.utils import six
 from django.utils.encoding import force_text, python_2_unicode_compatible
 from django.utils.text import Truncator
 from django.utils.timezone import now
 from django.utils.translation import ugettext, ugettext_lazy as _
-if getattr(settings, 'POSTMAN_I18N_URLS', False):
-    from django.utils.translation import pgettext_lazy
-else:
-    def pgettext_lazy(c, m): return m
+from django.views.decorators.debug import sensitive_variables
 
 from .query import PostmanQuery
 from .utils import email_visitor, notify_user
+
+if getattr(settings, 'POSTMAN_I18N_URLS', False):
+    from django.utils.translation import pgettext_lazy
+else:
+    def pgettext_lazy(c, m):
+        return m
+
+if VERSION < (1, 10):
+    from django.core.urlresolvers import reverse
+else:
+    from django.urls import reverse
 
 # options
 # Translators: keep consistency with the <option> parameter in url translations ; 'm' stands for 'messages'
@@ -88,7 +96,7 @@ def get_user_representation(user):
             mod_path, _, attr_name = show_user_as.rpartition('.')
             try:
                 return force_text(getattr(import_module(mod_path), attr_name)(user))
-            except:  # ImportError, AttributeError, TypeError (not callable)
+            except Exception:  # ImportError, AttributeError, TypeError (not callable)
                 pass
         else:
             attr = getattr(user, show_user_as, None)
@@ -99,7 +107,7 @@ def get_user_representation(user):
     elif callable(show_user_as):
         try:
             return force_text(show_user_as(user))
-        except:
+        except Exception:
             pass
     return force_text(user)  # default value, or in case of empty attribute or exception
 
@@ -136,15 +144,14 @@ class MessageManager(models.Manager):
             # should not be necessary. Otherwise add:
             # .extra(select={'count': 'SELECT 1'})
         else:
-            qs = qs.extra(select={'count': '{0}.count'.format(qs.query.pm_alias_prefix)})
+            qs = qs.annotate(count=RawSQL('{0}.count'.format(qs.query.pm_alias_prefix), ()))
             qs.query.pm_set_extra(table=(
-                # extra columns are always first in the SELECT query
-                # for tests with the version 2.4.1 of sqlite3 in py26, add to the select: , 'id': 'postman_message.id'
-                self.filter(lookups, thread_id__isnull=True).extra(select={'count': 0})\
+                self.filter(lookups, thread_id__isnull=True).annotate(count=Value(0, IntegerField()))
                     .values_list('id', 'count').order_by(),
                 # use separate annotate() to keep control of the necessary order
-                self.filter(lookups, thread_id__isnull=False).values('thread').annotate(count=models.Count('pk')).annotate(id=models.Max('pk'))\
-                    .values_list('id', 'count').order_by(),
+                self.filter(lookups, thread_id__isnull=False).values('thread').annotate(
+                    id=models.Max('pk')
+                ).annotate(count=models.Count('pk')).values_list('id', 'count').order_by(),
             ))
             return qs
 
@@ -165,7 +172,7 @@ class MessageManager(models.Manager):
         """
         Return the number of unread messages for a user.
 
-        Designed for context_processors.py and templatetags/postman_tags.py
+        Designed for context_processors.py and templatetags/postman_tags.py.
 
         """
         return self.inbox(user, related=False, option=OPTION_MESSAGES).filter(read_at__isnull=True).count()
@@ -247,7 +254,6 @@ class MessageManager(models.Manager):
         Return a field-lookups filter as a permission controller for a reply request.
 
         The user must be the recipient or sender of the accepted, non-deleted, message
-
         """
         return (
             models.Q(recipient=user) | models.Q(sender=user)
@@ -275,11 +281,19 @@ class Message(models.Model):
 
     subject = models.CharField(_("subject"), max_length=SUBJECT_MAX_LENGTH)
     body = models.TextField(_("body"), blank=True)
-    sender = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='sent_messages', null=True, blank=True, verbose_name=_("sender"))
-    recipient = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='received_messages', null=True, blank=True, verbose_name=_("recipient"))
+    sender = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='sent_messages',
+        null=True, blank=True, verbose_name=_("sender"))
+    recipient = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='received_messages',
+        null=True, blank=True, verbose_name=_("recipient"))
     email = models.EmailField(_("visitor"), blank=True)  # instead of either sender or recipient, for an AnonymousUser
-    parent = models.ForeignKey('self', related_name='next_messages', null=True, blank=True, verbose_name=_("parent message"))
-    thread = models.ForeignKey('self', related_name='child_messages', null=True, blank=True, verbose_name=_("root message"))
+    parent = models.ForeignKey(
+        'self', on_delete=models.CASCADE, related_name='next_messages',
+        null=True, blank=True, verbose_name=_("parent message"))
+    thread = models.ForeignKey(
+        'self', on_delete=models.CASCADE, related_name='child_messages',
+        null=True, blank=True, verbose_name=_("root message"))
     sent_at = models.DateTimeField(_("sent at"), default=now)
     read_at = models.DateTimeField(_("read at"), null=True, blank=True)
     replied_at = models.DateTimeField(_("replied at"), null=True, blank=True)
@@ -289,7 +303,8 @@ class Message(models.Model):
     recipient_deleted_at = models.DateTimeField(_("deleted by recipient at"), null=True, blank=True)
     # moderation fields
     moderation_status = models.CharField(_("status"), max_length=1, choices=STATUS_CHOICES, default=STATUS_PENDING)
-    moderation_by = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='moderated_messages',
+    moderation_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='moderated_messages',
         null=True, blank=True, verbose_name=_("moderator"))
     moderation_date = models.DateTimeField(_("moderated at"), null=True, blank=True)
     moderation_reason = models.CharField(_("rejection reason"), max_length=120, blank=True)
@@ -311,9 +326,11 @@ class Message(models.Model):
     def is_pending(self):
         """Tell if the message is in the pending state."""
         return self.moderation_status == STATUS_PENDING
+
     def is_rejected(self):
         """Tell if the message is in the rejected state."""
         return self.moderation_status == STATUS_REJECTED
+
     def is_accepted(self):
         """Tell if the message is in the accepted state."""
         return self.moderation_status == STATUS_ACCEPTED
@@ -407,6 +424,7 @@ class Message(models.Model):
         """Return the number of accepted responses."""
         return self.next_messages.filter(moderation_status=STATUS_ACCEPTED).count()
 
+    @sensitive_variables('values')
     def quote(self, format_subject, format_body=None):
         """Return a dictionary of quote values to initiate a reply."""
         values = {'subject': format_subject(self.subject)[:self.SUBJECT_MAX_LENGTH]}
@@ -515,15 +533,19 @@ class Message(models.Model):
             moderators = (moderators,)
         for moderator in moderators:
             rating = moderator(self)
-            if rating is None: continue
+            if rating is None:
+                continue
             if isinstance(rating, tuple):
                 percent, reason = rating
             else:
                 percent = rating
                 reason = getattr(moderator, 'default_reason', '')
-            if percent is False: percent = 0
-            if percent is True: percent = 100
-            if not 0 <= percent <= 100: continue
+            if percent is False:
+                percent = 0
+            if percent is True:
+                percent = 100
+            if not 0 <= percent <= 100:
+                continue
             if percent == 0:
                 auto = False
                 final_reason = reason

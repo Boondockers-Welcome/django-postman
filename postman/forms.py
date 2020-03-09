@@ -14,7 +14,7 @@ Examples of customization:
 """
 from __future__ import unicode_literals
 
-from django import forms
+from django import forms, VERSION
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db import transaction
@@ -48,7 +48,7 @@ class BaseWriteForm(forms.ModelForm):
         self.site = kwargs.pop('site', None)
         super(BaseWriteForm, self).__init__(*args, **kwargs)
 
-        self.instance.sender = sender if (sender and sender.is_authenticated()) else None
+        self.instance.sender = sender if (sender and (sender.is_authenticated if VERSION >= (1, 10) else sender.is_authenticated())) else None
         if exchange_filter:
             self.exchange_filter = exchange_filter
         if 'recipients' in self.fields:

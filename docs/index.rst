@@ -6,7 +6,11 @@
 Welcome to django-postman's documentation!
 ==========================================
 
-This is an application for `Django <http://www.djangoproject.com>`_-powered websites.
+This is an application for `Django <https://www.djangoproject.com>`_-powered websites.
+
+A list of available translations is maintained in the `Wiki <https://bitbucket.org/psam/django-postman/wiki/>`_.
+
+Your contribution to the translations is welcomed `here <https://www.transifex.com/psam/django-postman/>`_.
 
 Basically, the purpose is to allow authenticated users of a site to exchange private **messages**
 within the site.  In this documentation, the word *user* is to be understood as an instance of a User,
@@ -22,10 +26,10 @@ an email address for the reply. The email is obfuscated to the recipient.
 What is a message ? Roughly a piece of text, about a subject, sent by a sender to a recipient.
 Each user has access to a collection of messages, stored in folders:
 
-    | **Inbox** for incoming messages
-    | **Sent** for sent messages
-    | **Archives** for archived messages
-    | **Trash** for messages marked as deleted
+* **Inbox** for incoming messages
+* **Sent** for sent messages
+* **Archives** for archived messages
+* **Trash** for messages marked as deleted
 
 In folders, messages can be presented in two modes:
 

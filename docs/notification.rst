@@ -13,8 +13,8 @@ If you want the email to be in HTML format:
 1. Create the .html version.
 #. Override the .txt version (otherwise the template provided by default applies) with either:
 
-    - a non empty content of your design.
-    - or an empty content, meaning by convention a fallback to the .html content with all tags stripped.
+   - a non empty content of your design.
+   - or an empty content, meaning by convention a fallback to the .html content with all tags stripped.
 
 .. _for_visitors:
 

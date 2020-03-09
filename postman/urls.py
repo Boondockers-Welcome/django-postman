@@ -2,7 +2,7 @@
 If the default usage of the views suits you, simply use a line like
 this one in your root URLconf to set up the default URLs::
 
-    (r'^messages/', include('postman.urls', namespace='postman', app_name='postman')),
+    path('messages/', include('postman.urls', namespace='postman')),
 
 Otherwise you may customize the behavior by passing extra parameters.
 
@@ -88,37 +88,41 @@ Refer to documentation.
 """
 from __future__ import unicode_literals
 
+from django import VERSION
 from django.conf import settings
-from django.conf.urls import url
+if VERSION < (2, 0):
+    from django.conf.urls import url as re_path
+else:
+    from django.urls import re_path
 if getattr(settings, 'POSTMAN_I18N_URLS', False):
     from django.utils.translation import pgettext_lazy
 else:
     def pgettext_lazy(c, m): return m
-from django.views.generic.base import RedirectView
 
 from .views import (InboxView, SentView, ArchivesView, TrashView,
         WriteView, ReplyView, MessageView, ConversationView,
-        ArchiveView, DeleteView, UndeleteView, MarkReadView, MarkUnreadView)
+        ArchiveView, DeleteView, UndeleteView, MarkReadView, MarkUnreadView,
+        IndexView)
 
-
+app_name = 'postman'
 urlpatterns = [
     # Translators: keep consistency of the <option> parameter with the translation for 'm'
-    url(pgettext_lazy('postman_url', r'^inbox/(?:(?P<option>m)/)?$'), InboxView.as_view(), name='inbox'),
+    re_path(pgettext_lazy('postman_url', r'^inbox/(?:(?P<option>m)/)?$'), InboxView.as_view(), name='inbox'),
     # Translators: keep consistency of the <option> parameter with the translation for 'm'
-    url(pgettext_lazy('postman_url', r'^sent/(?:(?P<option>m)/)?$'), SentView.as_view(), name='sent'),
+    re_path(pgettext_lazy('postman_url', r'^sent/(?:(?P<option>m)/)?$'), SentView.as_view(), name='sent'),
     # Translators: keep consistency of the <option> parameter with the translation for 'm'
-    url(pgettext_lazy('postman_url', r'^archives/(?:(?P<option>m)/)?$'), ArchivesView.as_view(), name='archives'),
+    re_path(pgettext_lazy('postman_url', r'^archives/(?:(?P<option>m)/)?$'), ArchivesView.as_view(), name='archives'),
     # Translators: keep consistency of the <option> parameter with the translation for 'm'
-    url(pgettext_lazy('postman_url', r'^trash/(?:(?P<option>m)/)?$'), TrashView.as_view(), name='trash'),
-    url(pgettext_lazy('postman_url', r'^write/(?:(?P<recipients>[^/#]+)/)?$'), WriteView.as_view(), name='write'),
-    url(pgettext_lazy('postman_url', r'^reply/(?P<message_id>[\d]+)/$'), ReplyView.as_view(), name='reply'),
-    url(pgettext_lazy('postman_url', r'^view/(?P<message_id>[\d]+)/$'), MessageView.as_view(), name='view'),
+    re_path(pgettext_lazy('postman_url', r'^trash/(?:(?P<option>m)/)?$'), TrashView.as_view(), name='trash'),
+    re_path(pgettext_lazy('postman_url', r'^write/(?:(?P<recipients>[^/#]+)/)?$'), WriteView.as_view(), name='write'),
+    re_path(pgettext_lazy('postman_url', r'^reply/(?P<message_id>[\d]+)/$'), ReplyView.as_view(), name='reply'),
+    re_path(pgettext_lazy('postman_url', r'^view/(?P<message_id>[\d]+)/$'), MessageView.as_view(), name='view'),
     # Translators: 't' stands for 'thread'
-    url(pgettext_lazy('postman_url', r'^view/t/(?P<thread_id>[\d]+)/$'), ConversationView.as_view(), name='view_conversation'),
-    url(pgettext_lazy('postman_url', r'^archive/$'), ArchiveView.as_view(), name='archive'),
-    url(pgettext_lazy('postman_url', r'^delete/$'), DeleteView.as_view(), name='delete'),
-    url(pgettext_lazy('postman_url', r'^undelete/$'), UndeleteView.as_view(), name='undelete'),
-    url(pgettext_lazy('postman_url', r'^mark-read/$'), MarkReadView.as_view(), name='mark-read'),
-    url(pgettext_lazy('postman_url', r'^mark-unread/$'), MarkUnreadView.as_view(), name='mark-unread'),
-    url(r'^$', RedirectView.as_view(url='inbox/', permanent=True)),
+    re_path(pgettext_lazy('postman_url', r'^view/t/(?P<thread_id>[\d]+)/$'), ConversationView.as_view(), name='view_conversation'),
+    re_path(pgettext_lazy('postman_url', r'^archive/$'), ArchiveView.as_view(), name='archive'),
+    re_path(pgettext_lazy('postman_url', r'^delete/$'), DeleteView.as_view(), name='delete'),
+    re_path(pgettext_lazy('postman_url', r'^undelete/$'), UndeleteView.as_view(), name='undelete'),
+    re_path(pgettext_lazy('postman_url', r'^mark-read/$'), MarkReadView.as_view(), name='mark-read'),
+    re_path(pgettext_lazy('postman_url', r'^mark-unread/$'), MarkUnreadView.as_view(), name='mark-unread'),
+    re_path(r'^$', IndexView.as_view()),
 ]

@@ -1,15 +1,14 @@
 from __future__ import unicode_literals
 from datetime import timedelta
-from optparse import make_option
 
 from django.core.management.base import BaseCommand
 from django.db.models import Max, Count, F, Q
 from django.utils.timezone import now
-import django
 
 from postman.models import Message
 
-DEFAULT_DAYS = 30
+ARGUMENT_ARGS = ('-d', '--days')
+ARGUMENT_KWARGS = {'default': 30}
 
 
 class Command(BaseCommand):
@@ -17,39 +16,30 @@ class Command(BaseCommand):
   Messages or conversations marked as deleted by both sender and recipient,
   more than a minimal number of days ago."""
 
-    if django.VERSION < (1, 8):
-        option_list = BaseCommand.option_list + (
-            make_option(
-                '-d', '--days', type='int', default=DEFAULT_DAYS,
-                help='The minimal number of days a message is kept marked as deleted, '
-                'before to be considered for real deletion [default: %s]' % DEFAULT_DAYS
-            ),
-        )
-
     def add_arguments(self, parser):
         parser.add_argument(
-            '-d', '--days', type=int, default=DEFAULT_DAYS,
+            *ARGUMENT_ARGS,
+            type=int,
             help='The minimal number of days a message is kept marked as deleted, '
-            'before to be considered for real deletion [default: %s]' % DEFAULT_DAYS
+                 'before to be considered for real deletion [default: %(default)s]',
+            **ARGUMENT_KWARGS
         )
 
-    def handle(self, **options):
-        return self.handle_noargs(**options)
-
-    def handle_noargs(self, **options):
+    # no more NoArgsCommand and handle_noargs with Dj >= 1.8
+    def handle(self, *args, **options):
         verbose = int(options.get('verbosity'))
         days = options.get('days')
         date = now() - timedelta(days=days)
         if verbose >= 1:
-            self.stdout.write("Erase messages and conversations marked as deleted before %s\n" % date)
+            self.stdout.write("Erase messages and conversations marked as deleted before {0}".format(date))
         # for a conversation to be candidate, all messages must satisfy the criteria
         tpks = Message.objects.filter(thread__isnull=False).values('thread').annotate(
-                cnt=Count('pk'),
-                s_max=Max('sender_deleted_at'),    s_cnt=Count('sender_deleted_at'),
-                r_max=Max('recipient_deleted_at'), r_cnt=Count('recipient_deleted_at')
-            ).order_by().filter(
-                s_cnt=F('cnt'), r_cnt=F('cnt'), s_max__lte=date, r_max__lte=date
-            ).values_list('thread', flat=True)
+            cnt=Count('pk'),
+            s_max=Max('sender_deleted_at'), s_cnt=Count('sender_deleted_at'),
+            r_max=Max('recipient_deleted_at'), r_cnt=Count('recipient_deleted_at')
+        ).order_by().filter(
+            s_cnt=F('cnt'), r_cnt=F('cnt'), s_max__lte=date, r_max__lte=date
+        ).values_list('thread', flat=True)
         Message.objects.filter(
             Q(thread__in=tpks) |
             Q(thread__isnull=True, sender_deleted_at__lte=date, recipient_deleted_at__lte=date)

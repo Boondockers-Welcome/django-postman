@@ -20,6 +20,7 @@ from __future__ import unicode_literals
 
 from django.contrib.sites.models import Site
 from django.utils.timezone import now
+from django.views.decorators.debug import sensitive_variables
 
 from postman.models import Message, STATUS_PENDING, STATUS_ACCEPTED
 
@@ -29,6 +30,7 @@ def _get_site():
     return Site.objects.get_current() if Site._meta.installed else None
 
 
+@sensitive_variables('subject', 'body')
 def pm_broadcast(sender, recipients, subject, body='', skip_notification=False):
     """
     Broadcast a message to multiple Users.
@@ -53,6 +55,7 @@ def pm_broadcast(sender, recipients, subject, body='', skip_notification=False):
             message.notify_users(STATUS_PENDING, _get_site())
 
 
+@sensitive_variables('subject', 'body')
 def pm_write(sender, recipient, subject, body='', skip_notification=False,
         auto_archive=False, auto_delete=False, auto_moderators=None,
         thread=None):

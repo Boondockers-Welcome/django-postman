@@ -2,6 +2,31 @@
 Django Postman changelog
 ========================
 
+Version 3.6.2, November 2018
+----------------------------
+- Tried to lower exposure of message properties (subject, body) in error reports.
+- Fixed issue #105, for privacy concern, do not cache views serving message related data.
+- Fixed issue #106, a union() error in Django.
+- Fixed issue #103, an adjustment for the case of Message model inheritance.
+- Fixed issue #101, for security concern, ignore the scheme and domain parts in the 'next' query param.
+- Made use of the new union() queryset operator.
+
+Version 3.6.1, December 2017
+----------------------------
+- Fixed issue #98, a User.isXXX() adjustment missed in rev152.
+
+Version 3.6.0, November 2017
+----------------------------
+* Fixed issue #96, an adjustment for Django 2.0 (rc1).
+* Updated to changes and warnings of Django 1.11.
+* Made adjustments for Django 2.0 relating to the deprecated User.is_XXX().
+* Fixed issue #95, bad redirect for the index page when POSTMAN_I18N_URLS is active.
+* Fixed issue #94, explicit on_delete=models.CASCADE on ForeignKey for Django 2.0.
+* Fixed issue #86, need for the return of the message created by api.pm_write().
+* Adjusted the management commands to the new design introduced in Django 1.8.
+* Added a setting: POSTMAN_FROM_EMAIL.
+* Added a setting: POSTMAN_PARAMS_EMAIL.
+
 Version 3.5.1, November 2016
 ----------------------------
 * Fixed issue #84, importation dependency sequence inadequate for pip/setup.py
