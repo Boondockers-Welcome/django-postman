@@ -18,3 +18,4 @@ def create_notice_types(*args, **kwargs):
 
 
 msg_accepted_notification_sending = django.dispatch.Signal(providing_args=["message"])
+msg_read = django.dispatch.Signal(providing_args=["message"])

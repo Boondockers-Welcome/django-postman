@@ -17,6 +17,7 @@ from django.utils.timezone import now
 from django.utils.translation import ugettext, ugettext_lazy as _
 from django.views.decorators.debug import sensitive_variables
 
+from .signals import msg_read
 from .query import PostmanQuery
 from .utils import email_visitor, notify_user
 
@@ -263,12 +264,17 @@ class MessageManager(models.Manager):
         """
         Set messages as read.
         """
-        return self.filter(
+        queryset = self.filter(
             filter,
             recipient=user,
             moderation_status=STATUS_ACCEPTED,
             read_at__isnull=True,
-        ).update(read_at=now())
+        )
+        message_ids = [mid for mid in queryset.values_list('id', flat=True)]
+        update_count = queryset.update(read_at=now())
+        for m in self.filter(id__in=message_ids):
+            msg_read.send(sender=m.__class__, message=m)
+        return update_count
 
 
 @python_2_unicode_compatible
