@@ -17,7 +17,7 @@ from django.utils.timezone import now
 from django.utils.translation import ugettext, ugettext_lazy as _
 from django.views.decorators.debug import sensitive_variables
 
-from .signals import msg_read
+from .signals import msg_read, thread_read
 from .query import PostmanQuery
 from .utils import email_visitor, notify_user
 
@@ -271,9 +271,38 @@ class MessageManager(models.Manager):
             read_at__isnull=True,
         )
         message_ids = [mid for mid in queryset.values_list('id', flat=True)]
+
+        # Get list of threads that are being updated
+        # (Most likely it's just a single thread, but do a full array just in case)
+        thread_ids = [
+            tid for tid in queryset.filter(
+                thread__isnull=False
+            ).order_by('thread_id').distinct('thread_id').values_list('thread_id', flat=True)
+        ]
+        thread_ids.extend([
+            tid for tid in queryset.filter(
+                thread=None
+            ).distinct().values_list('id', flat=True)
+        ])
+
+        # actually update the read flags on the messages
         update_count = queryset.update(read_at=now())
         for m in self.filter(id__in=message_ids):
             msg_read.send(sender=m.__class__, message=m)
+
+        # check all the affected threads to see if any is now completely read by the user
+        threads = self.filter(id__in=thread_ids)
+        for thread in threads:
+            if thread.thread is None:  # single message, user must have been recipient
+                if thread.read_at is not None:
+                    thread_read.send(sender=thread.__class__, thread=thread, reader=user)
+            else:  # actual thread, only look at messages where user is recipient
+                # either the first message wasn't for us, or we've read it already
+                if thread.recipient != user or thread.read_at is not None:
+                    if thread.child_messages.filter(recipient=user, read_at__isnull=True).count() == 0:
+                        # all child messages to us are also now read
+                        thread_read.send(sender=thread.__class__, thread=thread, reader=user)
+
         return update_count
 
 
