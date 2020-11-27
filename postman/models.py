@@ -178,6 +178,15 @@ class MessageManager(models.Manager):
         """
         return self.inbox(user, related=False, option=OPTION_MESSAGES).filter(read_at__isnull=True).count()
 
+    def inbox_unread_thread_count(self, user):
+        """
+        Return the number of unread threads for a user.
+        """
+        unread_messages = self.inbox(user, related=False, option=OPTION_MESSAGES).filter(read_at__isnull=True)
+        unread_threads = unread_messages.filter(thread__isnull=False).order_by('thread_id').distinct('thread_id')
+        unread_nonthreads = unread_messages.filter(thread=None)
+        return unread_threads.count() + unread_nonthreads.count()
+
     def sent(self, user, **kwargs):
         """
         Return all messages sent by a user but not marked as archived or deleted.
