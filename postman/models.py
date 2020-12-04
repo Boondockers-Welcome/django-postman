@@ -200,6 +200,24 @@ class MessageManager(models.Manager):
         }
         return self._folder(related, filters, **kwargs)
 
+    def received_and_sent(self, user, **kwargs):
+        """
+        Return all messages recieved or sent by a user that are not archived or deleted
+        """
+        related = ('recipient',)
+        filters = ({
+            'recipient': user,
+            'recipient_archived': False,
+            'recipient_deleted_at__isnull': True,
+            'moderation_status': STATUS_ACCEPTED,
+        }, {
+            'sender': user,
+            'sender_archived': False,
+            'sender_deleted_at__isnull': True,
+            # allow to see pending and rejected messages as well
+        })
+        return self._folder(related, filters, **kwargs)
+
     def archives(self, user, **kwargs):
         """
         Return messages belonging to a user and marked as archived.
